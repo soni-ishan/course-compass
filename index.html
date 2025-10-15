@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Course Advisor Chatbot</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .chat-container {
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .chat-bubble-user {
+            background-color: #3b82f6; /* blue-500 */
+            color: white;
+        }
+        .chat-bubble-bot {
+            background-color: #e5e7eb; /* gray-200 */
+            color: #1f2937; /* gray-800 */
+        }
+        .lds-ellipsis {
+          display: inline-block;
+          position: relative;
+          width: 60px;
+          height: 20px;
+        }
+        .lds-ellipsis div {
+          position: absolute;
+          top: 5px;
+          width: 11px;
+          height: 11px;
+          border-radius: 50%;
+          background: #374151;
+          animation-timing-function: cubic-bezier(0, 1, 1, 0);
+        }
+        .lds-ellipsis div:nth-child(1) {
+          left: 6px;
+          animation: lds-ellipsis1 0.6s infinite;
+        }
+        .lds-ellipsis div:nth-child(2) {
+          left: 6px;
+          animation: lds-ellipsis2 0.6s infinite;
+        }
+        .lds-ellipsis div:nth-child(3) {
+          left: 26px;
+          animation: lds-ellipsis2 0.6s infinite;
+        }
+        .lds-ellipsis div:nth-child(4) {
+          left: 45px;
+          animation: lds-ellipsis3 0.6s infinite;
+        }
+        @keyframes lds-ellipsis1 {
+          0% {
+            transform: scale(0);
+          }
+          100% {
+            transform: scale(1);
+          }
+        }
+        @keyframes lds-ellipsis3 {
+          0% {
+            transform: scale(1);
+          }
+          100% {
+            transform: scale(0);
+          }
+        }
+        @keyframes lds-ellipsis2 {
+          0% {
+            transform: translate(0, 0);
+          }
+          100% {
+            transform: translate(19px, 0);
+          }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+
+    <div class="chat-container w-full max-w-2xl mx-auto bg-white rounded-2xl overflow-hidden flex flex-col" style="height: 80vh;">
+        <!-- Header -->
+        <header class="bg-blue-600 text-white p-4 flex items-center shadow-md">
+            <i class="fas fa-graduation-cap text-2xl mr-3"></i>
+            <div>
+                <h1 class="text-xl font-bold">Course Advisor</h1>
+                <p class="text-sm opacity-90">Your AI guide to university courses</p>
+            </div>
+        </header>
+
+        <!-- Chat Messages -->
+        <main id="chat-window" class="flex-1 p-6 space-y-4 overflow-y-auto">
+            <!-- Bot Welcome Message -->
+            <div class="flex items-start gap-3">
+                <div class="flex-shrink-0 h-8 w-8 rounded-full bg-gray-700 flex items-center justify-center">
+                    <i class="fas fa-robot text-white"></i>
+                </div>
+                <div class="chat-bubble-bot p-3 rounded-lg max-w-md">
+                    <p class="text-sm">Hello! How can I help you today? You can ask me about course prerequisites or for course recommendations in a specific field.</p>
+                </div>
+            </div>
+        </main>
+
+        <!-- Input Area -->
+        <footer class="p-4 bg-white border-t border-gray-200">
+            <div id="error-message" class="hidden text-red-500 text-sm mb-2 text-center"></div>
+            <form id="chat-form" class="flex items-center space-x-3">
+                <input type="text" id="message-input" placeholder="Ask about courses..." class="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200" autocomplete="off">
+                <button type="submit" id="send-button" class="bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </form>
+        </footer>
+    </div>
+
+    <script>
+        const chatForm = document.getElementById('chat-form');
+        const messageInput = document.getElementById('message-input');
+        const chatWindow = document.getElementById('chat-window');
+        const sendButton = document.getElementById('send-button');
+        const errorMessageDiv = document.getElementById('error-message');
+
+        // --- Event Listeners ---
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const message = messageInput.value.trim();
+            if (message) {
+                displayUserMessage(message);
+                messageInput.value = '';
+                await sendMessageToBackend(message);
+            }
+        });
+
+        // --- Display Functions ---
+        function displayUserMessage(message) {
+            const messageElement = `
+                <div class="flex items-start gap-3 justify-end">
+                    <div class="chat-bubble-user p-3 rounded-lg max-w-md">
+                        <p class="text-sm">${message}</p>
+                    </div>
+                    <div class="flex-shrink-0 h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center">
+                        <i class="fas fa-user text-white"></i>
+                    </div>
+                </div>
+            `;
+            chatWindow.innerHTML += messageElement;
+            scrollToBottom();
+        }
+
+        function displayBotMessage(message) {
+            // Sanitize message to prevent HTML injection. A simple replacement is enough for this app.
+            const sanitizedMessage = message.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            const messageElement = `
+                <div class="flex items-start gap-3">
+                    <div class="flex-shrink-0 h-8 w-8 rounded-full bg-gray-700 flex items-center justify-center">
+                        <i class="fas fa-robot text-white"></i>
+                    </div>
+                    <div class="chat-bubble-bot p-3 rounded-lg max-w-md">
+                        <p class="text-sm">${sanitizedMessage}</p>
+                    </div>
+                </div>
+            `;
+            chatWindow.innerHTML += messageElement;
+            scrollToBottom();
+        }
+        
+        function displayLoadingIndicator() {
+            const loadingElement = `
+                <div id="loading-indicator" class="flex items-start gap-3">
+                     <div class="flex-shrink-0 h-8 w-8 rounded-full bg-gray-700 flex items-center justify-center">
+                        <i class="fas fa-robot text-white"></i>
+                    </div>
+                    <div class="chat-bubble-bot p-3 rounded-lg">
+                        <div class="lds-ellipsis"><div></div><div></div><div></div><div></div></div>
+                    </div>
+                </div>
+            `;
+            chatWindow.innerHTML += loadingElement;
+            scrollToBottom();
+        }
+
+        function removeLoadingIndicator() {
+            const loadingIndicator = document.getElementById('loading-indicator');
+            if (loadingIndicator) {
+                loadingIndicator.remove();
+            }
+        }
+        
+        function displayError(message) {
+            errorMessageDiv.textContent = message;
+            errorMessageDiv.classList.remove('hidden');
+            setTimeout(() => {
+                errorMessageDiv.classList.add('hidden');
+            }, 5000); // Hide after 5 seconds
+        }
+
+        // --- Helper Functions ---
+        function scrollToBottom() {
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        // --- API Call ---
+        async function sendMessageToBackend(message) {
+            displayLoadingIndicator();
+            sendButton.disabled = true;
+
+            try {
+                const response = await fetch('http://localhost:5001/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ message: message }),
+                });
+
+                removeLoadingIndicator();
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                displayBotMessage(data.reply);
+
+            } catch (error) {
+                console.error('Error:', error);
+                removeLoadingIndicator();
+                displayBotMessage("Sorry, I'm having trouble connecting to my brain right now. Please try again later.");
+                displayError(error.message);
+            } finally {
+                sendButton.disabled = false;
+                messageInput.focus();
+            }
+        }
+    </script>
+</body>
+</html>

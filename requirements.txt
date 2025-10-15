@@ -1,0 +1,6 @@
+flask
+flask-cors
+neo4j
+groq
+python-dotenv
+gunicorn
