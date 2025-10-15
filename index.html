@@ -202,13 +202,15 @@
             chatWindow.scrollTop = chatWindow.scrollHeight;
         }
 
+        const API_BASE_URL = 'https://course-compass-ts9r.onrender.com';
+
         // --- API Call ---
         async function sendMessageToBackend(message) {
             displayLoadingIndicator();
             sendButton.disabled = true;
 
             try {
-                const response = await fetch('http://localhost:5001/chat', {
+                const response = await fetch(`${API_BASE_URL}/chat`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
